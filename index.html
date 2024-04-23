@@ -62,24 +62,6 @@
     </div>
 </body>
 <script>
-    const screenWidth = window.innerWidth;
-    const maxMobileWidth = 600;
-    if (screenWidth > maxMobileWidth) {
-        document.body.style.display = "none";
-        const messageElement = document.createElement("div");
-        messageElement.textContent = "Strona internetowa dostępna tylko na urządzeniach mobilnych.";
-        messageElement.style.cssText = `
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 9999;
-    background-color: #fff;
-    padding: 20px;
-    border: 1px solid #ccc;
-  `;
-        document.body.appendChild(messageElement);
-    }
 
 </script>
 </html>
