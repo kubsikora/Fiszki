@@ -17,14 +17,14 @@ Here you can find all the colors used in the "Fiszki" app, for both light mode a
 
 ![Light colors](https://i.imgur.com/5KFXxUL.png)
 
-```kotlin
-val lightColors = mapOf(
-    "background_color" to "#FAF1E6",
-    "window_color" to "#FDFAF6",
-    "bonus_color" to "#E4EFE7",
-    "focus_color" to "#064420",
-    "font_color" to "#000000"
-)
+```flutter
+Map<String, String> lightColors = {
+  'background_color': '#FAF1E6',
+  'window_color': '#FDFAF6',
+  'bonus_color': '#E4EFE7',
+  'focus_color': '#064420',
+  'font_color': '#000000',
+};
 ```
 
 
@@ -41,12 +41,12 @@ val lightColors = mapOf(
 
 ![Light colors](https://i.imgur.com/akhy0DP.png)
 
-```kotlin
-val darkColors = mapOf(
-    "background_color" to "#040D12",
-    "window_color" to "#183D3D",
-    "bonus_color" to "#5C8374",
-    "focus_color" to "#93B1A6",
-    "font_color" to "#FFFFFF"
-)
+```flutter
+Map<String, String> darkColors = {
+  'background_color': '#040D12',
+  'window_color': '#183D3D',
+  'bonus_color': '#5C8374',
+  'focus_color': '#93B1A6',
+  'font_color': '#FFFFFF',
+};
 ```
