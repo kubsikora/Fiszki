@@ -157,6 +157,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      
       theme: ThemeData(
         textSelectionTheme: const TextSelectionThemeData(
           cursorColor: Color.fromRGBO(6, 68, 32, 1.0),
@@ -171,8 +172,13 @@ class MyApp extends StatelessWidget {
       title: 'Fiszki',
      
       home: Scaffold(
+        backgroundColor: Color.fromRGBO(250, 241, 230, 1.0),
+
         appBar: AppBar(
+          backgroundColor: Color.fromRGBO(250, 241, 230, 1.0),
+
           title: SizedBox(
+            
             height: 55, // dostosuj wysokość do własnych preferencji
             child: Image.asset('assets/logo.png'), // Zamiast tekstu, wyświetlamy logo
           ),
