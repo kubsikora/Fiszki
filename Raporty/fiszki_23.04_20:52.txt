@@ -1,0 +1,213 @@
+import 'dart:async';
+
+// ignore: unused_import
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final database = await openDatabase(
+    join(await getDatabasesPath(), 'f.db'),
+    onCreate: (db, version) async {
+      await db.execute(
+        'CREATE TABLE fiszki(id INTEGER PRIMARY KEY, name TEXT, question TEXT, answer TEXT )',
+      );
+      await db.execute(
+        'CREATE TABLE category(id INTEGER PRIMARY KEY, name TEXT, color TEXT)',
+      );
+    },
+    version: 1,
+  );
+  Future<void> insert_q_a(Fiszki fiszki) async {
+    final db = await database;
+    await db.insert(
+      'fiszki',
+      fiszki.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+  Future<void> insert_cat(Category category) async {
+    final db = await database;
+    await db.insert(
+      'category',
+      category.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+  Future<List<Fiszki>> fiszki() async {
+    final db = await database;
+    final List<Map<String, dynamic>> fiszkiMaps = await db.query('fiszki');
+    return List.generate(fiszkiMaps.length, (i) {
+      return Fiszki(
+        id: fiszkiMaps[i]['id'],
+        name: fiszkiMaps[i]['name'],
+        question: fiszkiMaps[i]['question'],
+        answer: fiszkiMaps[i]['answer'],
+      );
+    });
+  }
+  Future<List<Category>> category() async {
+    final db = await database;
+    final List<Map<String, dynamic>> categoryMaps = await db.query('category');
+    return List.generate(categoryMaps.length, (i) {
+      return Category(
+        id: categoryMaps[i]['id'],
+        name: categoryMaps[i]['name'],
+        color: categoryMaps[i]['color'],
+      );
+    });
+  }
+  var fiszka = Fiszki(
+    id: 0,
+    name: 'jezyk_polski',
+    question: 'Kto napisał lalkę',
+    answer: 'Bolesław Prus',
+  );
+  await insert_q_a(fiszka);
+  var kategoria = Category(
+    id: 0,
+    name: 'jezyk_polski',
+    color: 'Kto napisał lalkę',
+  );
+  await insert_cat(kategoria);
+  runApp(const MyApp());
+
+}
+
+class Fiszki {
+  final int id;
+  final String name;
+  final String question;
+  final String answer;
+
+  Fiszki({
+    required this.id,
+    required this.name,
+    required this.question,
+    required this.answer,
+  });
+
+  // Dodaj metodę fromMap do klasy User
+  factory Fiszki.fromMap(Map<String, dynamic> map) {
+    return Fiszki(
+      id: map['id'],
+      name: map['name'],
+      question: map['question'],
+      answer: map['answer'],
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'question': question,
+      'answer': answer,
+    };
+  }
+
+  @override
+  String toString() {
+    return 'User{id: $id, name: $name, question: $question, answer: $answer}';
+  }
+}
+
+class Category {
+  final int id;
+  final String name;
+  final String color;
+
+  Category({
+    required this.id,
+    required this.name,
+    required this.color,
+  });
+
+  // Dodaj metodę fromMap do klasy User
+  factory Category.fromMap(Map<String, dynamic> map) {
+    return Category(
+      id: map['id'],
+      name: map['name'],
+      color: map['color'],
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'color': color,
+    };
+  }
+
+  @override
+  String toString() {
+    return 'User{id: $id, name: $name, color: $color}';
+  }
+}
+
+
+
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Fiszki',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.deepPurple),
+      ),
+      home: Scaffold(
+        appBar: AppBar(
+          title: SizedBox(
+            height: 50, // dostosuj wysokość do własnych preferencji
+            child: Image.asset('assets/logo.png'), // Zamiast tekstu, wyświetlamy logo
+          ),
+          centerTitle: true,          
+          actions: [
+            // Przycisk "+" w prawym górnym rogu
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.deepPurple,
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+                child: PopupMenuButton<String>(
+                  onSelected: (value) {
+                    // Obsługa wyboru opcji z menu rozwijanego
+                    print('Wybrano: $value');
+                  },
+                  itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                    const PopupMenuItem<String>(
+                      value: 'Dodaj ręcznie',
+                      child: ListTile(
+                        leading: Icon(Icons.mode_edit_outline_outlined),
+                        title: Text('Dodaj ręcznie'),
+                      ),
+                    ),
+                    const PopupMenuItem<String>(
+                      value: 'Wczytaj z pliku tekstowego',
+                      child: ListTile(
+                        leading: Icon(Icons.file_upload),
+                        title: Text('Dodaj z pliku tekstowego'),
+                      ),
+                    ),
+                  ],
+                  icon: Icon(Icons.add),
+                ),
+              ),
+            ),
+          ],
+        ),
+        body: Center(
+          child: Text('Zawartość aplikacji'),
+        ),
+      ),
+    );
+  }
+}
