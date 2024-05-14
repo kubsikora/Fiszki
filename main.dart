@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:flutter_circle_color_picker/flutter_circle_color_picker.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -160,12 +161,12 @@ class _MyAppState extends State<MyApp> {
     final List<Map<String, dynamic>> setMaps = await db.query('sets');
     List<Set> loadedSets = [];
     for (var setMap in setMaps) {
-      if (setMap['id'] != 0) { // Ignorujemy zestaw o id = 0
+      if (setMap['id'] != 0) { // Ignorujemy zestaw o id = 0 ma nie pełne dane 
         loadedSets.add(Set(
           id: setMap['id'],
           name: setMap['name'],
           color: setMap['color'],
-          textColor: setMap['textColor'], // Wczytujemy wartość koloru tekstu
+          textColor: setMap['textColor'],
         ));
       }
     }
@@ -179,6 +180,12 @@ class _MyAppState extends State<MyApp> {
       theme: ThemeData(
         scaffoldBackgroundColor: AppColors.background,
         primaryColor: AppColors.button,
+        textSelectionTheme: const TextSelectionThemeData(
+          cursorColor: AppColors.text,
+          selectionColor: AppColors.text,
+          selectionHandleColor: AppColors.text,
+        
+        ),
       ),
       home: Scaffold(
         appBar: PreferredSize(
@@ -189,7 +196,7 @@ class _MyAppState extends State<MyApp> {
             flexibleSpace: Container(
               child: SizedBox(
                 width: 150,
-                height: 50,
+                height: 80,
                 child: Image.asset(
                   'assets/logo.png',
                   fit: BoxFit.contain,
@@ -210,7 +217,7 @@ class _MyAppState extends State<MyApp> {
                     await _addNewSetToDatabase();
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.button,
+                    backgroundColor: AppColors.background,
                     foregroundColor: AppColors.text,
                   ),
                   child: const Text('Create set'),
@@ -263,7 +270,8 @@ class _MyAppState extends State<MyApp> {
             ),
             IconButton(
               onPressed: () {
-                // Obsługa edycji zestawu
+                    Navigator.push(context, 
+                        MaterialPageRoute(builder: (context) => NoteSetScreen()));
               },
               icon: Icon(Icons.edit, color: Color(int.tryParse(set.textColor) ?? 0xFF000000)),
             ),
@@ -314,7 +322,7 @@ class EmptyClass extends StatelessWidget {
             flexibleSpace: Container(
               child: SizedBox(
                 width: 150,
-                height: 50,
+                height: 80,
                 child: Image.asset(
                   'assets/logo.png',
                   fit: BoxFit.contain,
@@ -323,6 +331,129 @@ class EmptyClass extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ),
+
+    );
+  }
+}
+class NoteSetScreen extends StatefulWidget {
+  @override
+  _NoteSetScreenState createState() => _NoteSetScreenState();
+}
+
+class _NoteSetScreenState extends State<NoteSetScreen> {
+  late Color _selectedColor; // Domyślny kolor
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedColor = Colors.white; // Ustaw domyślny kolor podczas inicjalizacji stanu
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      
+      appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(kToolbarHeight),
+
+          child: AppBar(
+            backgroundColor: AppColors.background,
+            elevation: 0,
+            flexibleSpace: Container(
+              child: SizedBox(
+                width: 150,
+                height: 80,
+                child: Image.asset(
+                  'assets/logo.png',
+                  fit: BoxFit.contain,
+                  color: AppColors.text,
+                ),
+              ),
+            ),
+          ),
+
+        ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const TextField(
+              decoration: InputDecoration(labelText: 'Change name'),
+              cursorColor: AppColors.inny,
+            ),
+            const SizedBox(height: 16.0),
+            const Text(
+                  'Set color',
+                  style: TextStyle(
+                    fontSize: 20,
+                    color: AppColors.text
+                    ), // Zwiększamy rozmiar tekstu przycisku
+
+                ),
+            const SizedBox(height: 8.0),
+            Center(
+              child: Container(
+                width: 200, // Dostosuj szerokość kontenera według własnych preferencji
+                height: 200, // Dostosuj wysokość kontenera według własnych preferencji
+                child: CircleColorPicker(
+                  onChanged: (textcolor) {
+                    setState(() {
+                      _selectedColor = textcolor;
+                    });
+                  },
+                  // Ustaw domyślny kolor wewnątrz CircleColorPicker
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 18.0),
+            const Text(
+                  'Set text color',
+                  style: TextStyle(
+                    fontSize: 20,
+                    color: AppColors.text
+                    ), // Zwiększamy rozmiar tekstu przycisku
+
+                ),
+            const SizedBox(height: 8.0),
+            Center(
+              child: Container(
+                width: 200, // Dostosuj szerokość kontenera według własnych preferencji
+                height: 200, // Dostosuj wysokość kontenera według własnych preferencji
+                child: CircleColorPicker(
+                  onChanged: (textcolor) {
+                    setState(() {
+                      _selectedColor = textcolor;
+                    });
+                  },
+                  // Ustaw domyślny kolor wewnątrz CircleColorPicker
+                ),
+              ),
+            ),
+            const SizedBox(height: 18.0),
+            Center(
+              child: ElevatedButton(
+                onPressed: () {
+                  // Tutaj dodaj logikę obsługi przycisku Zapisz
+                },
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.background,
+                    foregroundColor: AppColors.text,
+                    minimumSize: const Size(150, 50), // Tutaj określamy minimalny rozmiar przycisku
+
+                  ),
+                
+                child: const Text(
+                  'Save',
+                  style: TextStyle(fontSize: 20), // Zwiększamy rozmiar tekstu przycisku
+
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
