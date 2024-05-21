@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:flutter_circle_color_picker/flutter_circle_color_picker.dart';
@@ -6,19 +7,18 @@ import 'package:flutter_circle_color_picker/flutter_circle_color_picker.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final database = await openDatabase(
-    join(await getDatabasesPath(), 'f.db'),
+    join(await getDatabasesPath(), 'f1.db'),
     onCreate: (db, version) async {
-      try{
+      try {
         await db.execute(
-          'CREATE TABLE fiszki(id INTEGER PRIMARY KEY, name TEXT, question TEXT, answer TEXT)',
+          'CREATE TABLE fiszki(id INTEGER PRIMARY KEY, setId INTEGER, name TEXT, question TEXT, answer TEXT)',
         );
         await db.execute(
           'CREATE TABLE sets(id INTEGER PRIMARY KEY, name TEXT, color TEXT, textColor TEXT)',
         );
-      }catch(e){
+      } catch (e) {
         print('Blad podczas tworzenia tabel: $e');
       }
-      
     },
     version: 1,
   );
@@ -28,12 +28,14 @@ void main() async {
 
 class Fiszki {
   final int id;
+  final int setId;
   final String name;
   final String question;
   final String answer;
 
   Fiszki({
     required this.id,
+    required this.setId,
     required this.name,
     required this.question,
     required this.answer,
@@ -42,6 +44,7 @@ class Fiszki {
   factory Fiszki.fromMap(Map<String, dynamic> map) {
     return Fiszki(
       id: map['id'],
+      setId: map['setId'],
       name: map['name'],
       question: map['question'],
       answer: map['answer'],
@@ -51,6 +54,7 @@ class Fiszki {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'setId': setId,
       'name': name,
       'question': question,
       'answer': answer,
@@ -59,7 +63,7 @@ class Fiszki {
 
   @override
   String toString() {
-    return 'Fiszki{id: $id, name: $name, question: $question, answer: $answer}';
+    return 'Fiszki{id: $id, setId: $setId, name: $name, question: $question, answer: $answer}';
   }
 }
 
@@ -67,13 +71,13 @@ class Set {
   final int id;
   final String name;
   final String color;
-  final String textColor; // Nowy argument reprezentujący kolor tekstu
+  final String textColor;
 
   Set({
     required this.id,
     required this.name,
     required this.color,
-    required this.textColor, // Dodajemy argument textColor
+    required this.textColor,
   });
 
   factory Set.fromMap(Map<String, dynamic> map) {
@@ -81,7 +85,7 @@ class Set {
       id: map['id'],
       name: map['name'],
       color: map['color'],
-      textColor: map['textColor'], // Wczytujemy wartość koloru tekstu
+      textColor: map['textColor'],
     );
   }
 
@@ -90,7 +94,7 @@ class Set {
       'id': id,
       'name': name,
       'color': color,
-      'textColor': textColor, // Zapisujemy wartość koloru tekstu
+      'textColor': textColor,
     };
   }
 
@@ -99,38 +103,18 @@ class Set {
     return 'Set{id: $id, name: $name, color: $color, textColor: $textColor}';
   }
 }
-
-
+//klasa kolorów
 class AppColors {
   static const Color background = Color(0xFFFAF1E6);
   static const Color button = Color(0xFFE4EFE7);
   static const Color text = Color(0xFF064420);
   static const Color inny = Color(0xFFFDFAF6);
-}
-class SetColors{
-  static const Color jeden = Color(0xFFCD7979);
-  static const Color dwa = Color(0xFFF5B35C);
-  static const Color trzy = Color(0xFFEBF357);
-  static const Color cztery = Color(0xFF5BDE4C);
-  static const Color piec = Color(0xFF53E69C);
-  static const Color szesc = Color(0xFF45EEC4);
-  static const Color siedem = Color(0xFF46E8E5);
-  static const Color osiem = Color(0xFF4C93DE);
-  static const Color dziewiec = Color(0xFF4C73DE);
-  static const Color dziesiec = Color(0xFF7F61ED);
-  static const Color jedenascie = Color(0xFFA771E0);
-  static const Color dwanascie = Color(0xFFE76BD6);
-  static const Color trzynascie = Color(0xFFE9479D);
-  static const Color czternascie = Color(0xFFEA5D64);
-  static const Color pietnascie = Color(0xFFE85555);
-}
-class TextColors{
-  static const Color czarny = Color(0xFF000000);
   static const Color bialy = Color(0xFFFFFFFF);
+  static const Color czarny = Color(0x00000000);
 }
 
 
-
+//główna klasa z widokiem listy zestawów
 class MyApp extends StatefulWidget {
   final Database database;
 
@@ -157,11 +141,11 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<List<Set>> _loadSets() async {
-    final db = await widget.database;
+    final db = widget.database;
     final List<Map<String, dynamic>> setMaps = await db.query('sets');
     List<Set> loadedSets = [];
     for (var setMap in setMaps) {
-      if (setMap['id'] != 0) { // Ignorujemy zestaw o id = 0 ma nie pełne dane 
+      if (setMap['id'] != 0) {
         loadedSets.add(Set(
           id: setMap['id'],
           name: setMap['name'],
@@ -180,12 +164,6 @@ class _MyAppState extends State<MyApp> {
       theme: ThemeData(
         scaffoldBackgroundColor: AppColors.background,
         primaryColor: AppColors.button,
-        textSelectionTheme: const TextSelectionThemeData(
-          cursorColor: AppColors.text,
-          selectionColor: AppColors.text,
-          selectionHandleColor: AppColors.text,
-        
-        ),
       ),
       home: Scaffold(
         appBar: PreferredSize(
@@ -196,7 +174,7 @@ class _MyAppState extends State<MyApp> {
             flexibleSpace: Container(
               child: SizedBox(
                 width: 150,
-                height: 80,
+                height: 50,
                 child: Image.asset(
                   'assets/logo.png',
                   fit: BoxFit.contain,
@@ -207,7 +185,7 @@ class _MyAppState extends State<MyApp> {
           ),
         ),
         body: Padding(
-          padding: const EdgeInsets.all(15), // Dodajemy margines 20 na wszystkich krawędziach
+          padding: const EdgeInsets.all(15),
           child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
@@ -217,13 +195,13 @@ class _MyAppState extends State<MyApp> {
                     await _addNewSetToDatabase();
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.background,
-                    foregroundColor: AppColors.text,
+                    backgroundColor: AppColors.text,
+                    foregroundColor: AppColors.background,
                   ),
                   child: const Text('Create set'),
                 ),
                 const SizedBox(height: 20),
-                Expanded( // Rozszerzamy Column, aby wypełnić dostępną przestrzeń
+                Expanded(
                   child: ListView.builder(
                     shrinkWrap: true,
                     itemCount: sets.length,
@@ -240,13 +218,17 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-
   Widget _buildSetWidget(BuildContext context, Set set) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => EmptyClass()), 
+          MaterialPageRoute(
+            builder: (context) => EmptyClass(
+              setId: set.id,
+              database: widget.database, // Przekazanie instancji bazy danych
+            ),
+          ),
         );
       },
       child: Container(
@@ -256,22 +238,30 @@ class _MyAppState extends State<MyApp> {
         height: 100,
         decoration: BoxDecoration(
           color: Color(int.tryParse(set.color) ?? 0xFF000000),
-          borderRadius: BorderRadius.circular(15), // Zaokrąglenie rogów
+          borderRadius: BorderRadius.circular(15),
         ),
-        child: Row( // Wiersz umożliwiający umieszczenie tekstu z lewej strony i przycisku z prawej
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
               set.name,
               style: TextStyle(
-                color: Color(int.tryParse(set.textColor) ?? 0xFF000000), // Ustawiamy kolor tekstu
-                fontSize: 16, // Domyślny rozmiar czcionki
+                color: Color(int.tryParse(set.textColor) ?? 0xFF000000),
+                fontSize: 16,
               ),
             ),
             IconButton(
               onPressed: () {
-                    Navigator.push(context, 
-                        MaterialPageRoute(builder: (context) => NoteSetScreen()));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => NoteSetScreen(
+                      setId: set.id,
+                      database: widget.database, // Przekazanie instancji bazy danych
+                      refreshSets: _loadSetsFromDatabase,
+                    ),
+                  ),
+                );
               },
               icon: Icon(Icons.edit, color: Color(int.tryParse(set.textColor) ?? 0xFF000000)),
             ),
@@ -281,17 +271,15 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-
   Future<void> _addNewSetToDatabase() async {
-    final db = await widget.database;
-    final List<Map<String, dynamic>> setsCount =
-        await db.rawQuery('SELECT COUNT(*) FROM sets');
+    final db = widget.database;
+    final List<Map<String, dynamic>> setsCount = await db.rawQuery('SELECT COUNT(*) FROM sets');
     final int id = setsCount[0]['COUNT(*)'] + 1;
     final newSet = Set(
       id: id,
       name: 'New set',
       color: '0xFF064420',
-      textColor: '0xFFFAF1E6', // Domyślny kolor tekstu
+      textColor: '0xFFFAF1E6',
     );
     await db.insert(
       'sets',
@@ -300,162 +288,320 @@ class _MyAppState extends State<MyApp> {
     );
     await _loadSetsFromDatabase();
   }
-
 }
 
-// Pusta klasa, którą można rozwijać w przypadku potrzeby
-class EmptyClass extends StatelessWidget {
-    @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: AppColors.background,
-        primaryColor: AppColors.button,
-      ),
-      home: Scaffold(
-        appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(kToolbarHeight),
-          child: AppBar(
-            backgroundColor: AppColors.background,
-            elevation: 0,
-            flexibleSpace: Container(
-              child: SizedBox(
-                width: 150,
-                height: 80,
-                child: Image.asset(
-                  'assets/logo.png',
-                  fit: BoxFit.contain,
-                  color: AppColors.text,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-
-    );
-  }
-}
+// klasa edycji zestawów - nazwa, kolory
 class NoteSetScreen extends StatefulWidget {
+  final int setId;
+  final Database database;
+  final Function refreshSets;
+
+
+  NoteSetScreen({required this.setId, required this.database, required this.refreshSets});
+
+
   @override
   _NoteSetScreenState createState() => _NoteSetScreenState();
 }
 
 class _NoteSetScreenState extends State<NoteSetScreen> {
+  late TextEditingController _nameController;
   late Color _selectedColor; // Domyślny kolor
+  late Color _selectedTextColor;
 
   @override
   void initState() {
     super.initState();
-    _selectedColor = Colors.white; // Ustaw domyślny kolor podczas inicjalizacji stanu
+    _selectedColor = AppColors.text; // Ustaw domyślny kolor podczas inicjalizacji stanu
+    _selectedTextColor = AppColors.background;
+    _nameController = TextEditingController(); // Inicjalizacja kontrolera dla pola tekstowego
+    _loadSetDetails();
+
+  }
+  Future<void> _loadSetDetails() async {
+    final db = widget.database;
+    final List<Map<String, dynamic>> setMaps = await db.query(
+      'sets',
+      where: 'id = ?',
+      whereArgs: [widget.setId],
+    );
+
+    if (setMaps.isNotEmpty) {
+      final set = Set.fromMap(setMaps.first);
+      setState(() {
+        _nameController.text = set.name;
+        _selectedColor = Color(int.parse(set.color));
+        _selectedTextColor = Color(int.parse(set.textColor));
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      
       appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(kToolbarHeight),
-
-          child: AppBar(
-            backgroundColor: AppColors.background,
-            elevation: 0,
-            flexibleSpace: Container(
-              child: SizedBox(
-                width: 150,
-                height: 80,
-                child: Image.asset(
-                  'assets/logo.png',
-                  fit: BoxFit.contain,
-                  color: AppColors.text,
-                ),
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: AppBar(
+          backgroundColor: AppColors.background,
+          elevation: 0,
+          flexibleSpace: Container(
+            child: SizedBox(
+              width: 150,
+              height: 80,
+              child: Image.asset(
+                'assets/logo.png',
+                fit: BoxFit.contain,
+                color: AppColors.text,
               ),
             ),
           ),
-
         ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const TextField(
-              decoration: InputDecoration(labelText: 'Change name'),
-              cursorColor: AppColors.inny,
-            ),
-            const SizedBox(height: 16.0),
-            const Text(
-                  'Set color',
-                  style: TextStyle(
-                    fontSize: 20,
-                    color: AppColors.text
-                    ), // Zwiększamy rozmiar tekstu przycisku
-
-                ),
-            const SizedBox(height: 8.0),
-            Center(
-              child: Container(
-                width: 200, // Dostosuj szerokość kontenera według własnych preferencji
-                height: 200, // Dostosuj wysokość kontenera według własnych preferencji
-                child: CircleColorPicker(
-                  onChanged: (textcolor) {
-                    setState(() {
-                      _selectedColor = textcolor;
-                    });
-                  },
-                  // Ustaw domyślny kolor wewnątrz CircleColorPicker
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 18.0),
-            const Text(
-                  'Set text color',
-                  style: TextStyle(
-                    fontSize: 20,
-                    color: AppColors.text
-                    ), // Zwiększamy rozmiar tekstu przycisku
-
-                ),
-            const SizedBox(height: 8.0),
-            Center(
-              child: Container(
-                width: 200, // Dostosuj szerokość kontenera według własnych preferencji
-                height: 200, // Dostosuj wysokość kontenera według własnych preferencji
-                child: CircleColorPicker(
-                  onChanged: (textcolor) {
-                    setState(() {
-                      _selectedColor = textcolor;
-                    });
-                  },
-                  // Ustaw domyślny kolor wewnątrz CircleColorPicker
-                ),
-              ),
-            ),
-            const SizedBox(height: 18.0),
-            Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  // Tutaj dodaj logikę obsługi przycisku Zapisz
-                },
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.background,
-                    foregroundColor: AppColors.text,
-                    minimumSize: const Size(150, 50), // Tutaj określamy minimalny rozmiar przycisku
-
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: _nameController, // Przypisanie kontrolera do pola tekstowego
+                decoration: const InputDecoration(
+                  labelText: 'Change name',
+                  labelStyle: TextStyle(color: AppColors.text, fontWeight: FontWeight.bold),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.text),
                   ),
-                
-                child: const Text(
-                  'Save',
-                  style: TextStyle(fontSize: 20), // Zwiększamy rozmiar tekstu przycisku
-
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.text),
+                  ),
+                  errorBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.text),
+                  ),
+                ),
+                style: TextStyle(color: AppColors.text),
+                cursorColor: AppColors.text,
+              ),
+              const SizedBox(height: 12.0),
+              const Center(
+                child: Text(
+                  'Choose set color',
+                  style: TextStyle(
+                    fontSize: 19,
+                    color: AppColors.text,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 5.0),
+              Center(
+                child: Container(
+                  child: CircleColorPicker(
+                    onChanged: (color) {
+                      setState(() {
+                        _selectedColor = color;
+                      });
+                    },
+                    size: const Size(200, 200),
+                    strokeWidth: 4,
+                    thumbSize: 36,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8.0),
+              const Center(
+                child: Text(
+                  'Choose text color',
+                  style: TextStyle(
+                    fontSize:19,
+                    color: AppColors.text,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8.0),
+              Center(
+                child: Container(
+                  child: CircleColorPicker(
+                    onChanged: (textcolor) {
+                      setState(() {
+                        _selectedTextColor = textcolor;
+                      });
+                    },
+                    size: const Size(200, 200),
+                    strokeWidth: 4,
+                    thumbSize: 36,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8.0),
+              Center(
+                child: ElevatedButton(
+                  onPressed: () {
+                    _saveChanges(context); // Wywołanie metody do zapisu zmian
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.text,
+                    foregroundColor: AppColors.background,
+                    minimumSize: const Size(150, 50), // Tutaj określamy minimalny rozmiar przycisku
+                  ),
+                  child: const Text(
+                    'Save',
+                    style: TextStyle(fontSize: 20), 
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+
+  void _saveChanges(BuildContext context) async {
+    final db = widget.database;
+    final int setId = widget.setId;
+
+    // Pobranie wartości z pola tekstowego
+    final String newName = _nameController.text;
+
+    // Konwersja kolorów na wartości tekstowe
+    final String newColor = _selectedColor.value.toRadixString(16);
+    final String newTextColor = _selectedTextColor.value.toRadixString(16);
+
+    // Aktualizacja danych w bazie danych
+    await db.update(
+      'sets',
+      {
+        'name': newName,
+        'color': '0x$newColor', // Formatowanie koloru do postaci '0xRRGGBB'
+        'textColor': '0x$newTextColor', // Formatowanie koloru do postaci '0xRRGGBB'
+      },
+      where: 'id = ?',
+      whereArgs: [setId],
+    );
+    // Ponowne załadowanie zestawów z bazy danych po zapisaniu zmian
+    widget.refreshSets();
+
+    // Powrót do poprzedniego widoku
+    Navigator.pop(context);
+  }
+
+
+  @override
+  void dispose() {
+    // Usunięcie kontrolera po zakończeniu
+    _nameController.dispose();
+    super.dispose();
+  }
+}
+
+// klasa widoku konkretnego zestawu
+class EmptyClass extends StatefulWidget {
+  final int setId;
+  final Database database;
+
+
+  EmptyClass({required this.setId, required this.database});
+
+
+  @override
+  _EmptyClassState createState() => _EmptyClassState();
+}
+
+class _EmptyClassState extends State<EmptyClass> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: AppBar(
+          backgroundColor: AppColors.background,
+          elevation: 0,
+          flexibleSpace: Container(
+            child: SizedBox(
+              width: 150,
+              height: 80,
+              child: Image.asset(
+                'assets/logo.png',
+                fit: BoxFit.contain,
+                color: AppColors.text,
+              ),
+            ),
+          ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AddQuestionScreen(
+                setId: widget.setId,
+                database: widget.database, // Przekazanie instancji bazy danych
+              ),
+            ),
+          );
+        },
+        backgroundColor: AppColors.text,
+        child: const Icon(Icons.add, color: AppColors.background),
+      ),
+    );
+  }
+}
+
+//klasa odpowiedzialna za dodawanie pytan i odpowiedzi 
+class AddQuestionScreen extends StatefulWidget {
+  final int setId;
+  final Database database;
+
+
+  AddQuestionScreen({required this.setId, required this.database});
+
+
+  @override
+  _AddQuestionScreenState createState() => _AddQuestionScreenState();
+}
+class _AddQuestionScreenState extends State<AddQuestionScreen> {
+  
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        flexibleSpace: Container(
+          child: SizedBox(
+            width: 150,
+            height: 80,
+            child: Image.asset(
+              'assets/logo.png',
+              fit: BoxFit.contain,
+              color: AppColors.text,
+            ),
+          ),
+        ),
+      ),
+      body: Padding(
+          padding: const EdgeInsets.all(15),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                ElevatedButton(
+                  onPressed: () async {
+                    
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.text,
+                    foregroundColor: AppColors.background,
+                  ),
+                  child: const Text('Add Q&A'),
+                ),
+              ],
+            ),
+          ),
+      ),
+    );
+  }
+  
 }
