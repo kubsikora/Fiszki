@@ -562,7 +562,49 @@ class AddQuestionScreen extends StatefulWidget {
   _AddQuestionScreenState createState() => _AddQuestionScreenState();
 }
 class _AddQuestionScreenState extends State<AddQuestionScreen> {
-  
+  final TextEditingController _questionController = TextEditingController();
+  final TextEditingController _answerController = TextEditingController();
+
+  Future<void> _addFlashcard(BuildContext context) async {
+    final db = widget.database;
+
+    // Pobierz nazwę zestawu z bazy danych
+    final List<Map<String, dynamic>> setMaps = await db.query(
+      'sets',
+      where: 'id = ?',
+      whereArgs: [widget.setId],
+    );
+    final String setName = setMaps.first['name'];
+
+    // Policzenie obecnych fiszek w tabeli
+    final List<Map<String, dynamic>> flashcardCount = await db.rawQuery('SELECT COUNT(*) FROM fiszki');
+    final int newId = (Sqflite.firstIntValue(flashcardCount) ?? 0) + 1;
+
+    // Dodanie nowej fiszki do bazy danych
+    await db.insert(
+      'fiszki',
+      {
+        'id': newId,
+        'setId': widget.setId,
+        'name': setName,
+        'question': _questionController.text,
+        'answer': _answerController.text,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+
+    // Wyczyść pola tekstowe
+    _questionController.clear();
+    _answerController.clear();
+
+    // Pokaż SnackBar
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Center(child: Text('Added Q&A successfully'))),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -582,26 +624,56 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
         ),
       ),
       body: Padding(
-          padding: const EdgeInsets.all(15),
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                ElevatedButton(
-                  onPressed: () async {
-                    
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.text,
-                    foregroundColor: AppColors.background,
+        padding: const EdgeInsets.all(15),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              TextField(
+                controller: _questionController,
+                decoration: const InputDecoration(
+                  labelText: 'Enter question',
+                  labelStyle: TextStyle(color: AppColors.text, fontWeight: FontWeight.bold),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.text),
                   ),
-                  child: const Text('Add Q&A'),
                 ),
-              ],
-            ),
+                style: const TextStyle(color: AppColors.text),
+                cursorColor: AppColors.text,
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _answerController,
+                decoration: const InputDecoration(
+                  labelText: 'Enter answer',
+                  labelStyle: TextStyle(color: AppColors.text, fontWeight: FontWeight.bold),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.text),
+                  ),
+                ),
+                style: const TextStyle(color: AppColors.text),
+                cursorColor: AppColors.text,
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () => _addFlashcard(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.text,
+                  foregroundColor: AppColors.background,
+                ),
+                child: const Text('Add'),
+              ),
+            ],
           ),
+        ),
       ),
     );
   }
-  
+
+  @override
+  void dispose() {
+    _questionController.dispose();
+    _answerController.dispose();
+    super.dispose();
+  }
 }
