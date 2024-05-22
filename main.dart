@@ -140,6 +140,24 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+  Future<void> _deleteSetFromDatabase(Set set) async {
+    final db = widget.database;
+    // Usuń fiszki powiązane z zestawem
+    await db.delete(
+      'fiszki',
+      where: 'setId = ?',
+      whereArgs: [set.id],
+    );
+    // Usuń zestaw
+    await db.delete(
+      'sets',
+      where: 'id = ?',
+      whereArgs: [set.id],
+    );
+    // Odśwież listę zestawów
+    _loadSetsFromDatabase();
+  }
+
   Future<List<Set>> _loadSets() async {
     final db = widget.database;
     final List<Map<String, dynamic>> setMaps = await db.query('sets');
@@ -174,7 +192,7 @@ class _MyAppState extends State<MyApp> {
             flexibleSpace: Container(
               child: SizedBox(
                 width: 150,
-                height: 50,
+                height: 80,
                 child: Image.asset(
                   'assets/logo.png',
                   fit: BoxFit.contain,
@@ -213,10 +231,11 @@ class _MyAppState extends State<MyApp> {
               ],
             ),
           ),
-        ),
+        ),  
       ),
     );
   }
+
 
   Widget _buildSetWidget(BuildContext context, Set set) {
     return GestureDetector(
@@ -231,45 +250,89 @@ class _MyAppState extends State<MyApp> {
           ),
         );
       },
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 10),
-        padding: const EdgeInsets.all(10),
-        width: 200,
-        height: 100,
-        decoration: BoxDecoration(
-          color: Color(int.tryParse(set.color) ?? 0xFF000000),
-          borderRadius: BorderRadius.circular(15),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              set.name,
-              style: TextStyle(
-                color: Color(int.tryParse(set.textColor) ?? 0xFF000000),
-                fontSize: 16,
+      child: Dismissible(
+        key: Key(set.id.toString()),
+        onDismissed: (direction) {
+          if (direction == DismissDirection.endToStart) {
+            _deleteSetFromDatabase(set);
+          } else if (direction == DismissDirection.startToEnd) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => NoteSetScreen(
+                  setId: set.id,
+                  database: widget.database, // Przekazanie instancji bazy danych
+                  refreshSets: _loadSetsFromDatabase,
+                ),
               ),
-            ),
-            IconButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => NoteSetScreen(
-                      setId: set.id,
-                      database: widget.database, // Przekazanie instancji bazy danych
-                      refreshSets: _loadSetsFromDatabase,
-                    ),
+            );
+          }
+        },
+        background: Container(
+          alignment: Alignment.centerRight,
+          padding: EdgeInsets.only(right: 20.0),
+          color: Colors.red,
+          child: Icon(Icons.delete, color: Colors.white),
+        ),
+        secondaryBackground: Container(
+          alignment: Alignment.centerLeft,
+          padding: EdgeInsets.only(left: 20.0),
+          color: Colors.red,
+          child: Icon(Icons.delete, color: Colors.white),
+        ),
+        direction: DismissDirection.horizontal,
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.all(10),
+          width: 400,
+          height: 100,
+          decoration: BoxDecoration(
+            color: Color(int.tryParse(set.color) ?? 0xFF000000),
+            borderRadius: BorderRadius.circular(15),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                set.name,
+                style: TextStyle(
+                  color: Color(int.tryParse(set.textColor) ?? 0xFF000000),
+                  fontSize: 16,
+                ),
+              ),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => NoteSetScreen(
+                            setId: set.id,
+                            database: widget.database, // Przekazanie instancji bazy danych
+                            refreshSets: _loadSetsFromDatabase,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: Icon(Icons.edit, color: Color(int.tryParse(set.textColor) ?? 0xFF000000)),
                   ),
-                );
-              },
-              icon: Icon(Icons.edit, color: Color(int.tryParse(set.textColor) ?? 0xFF000000)),
-            ),
-          ],
+                  IconButton(
+                    onPressed: () {
+                      _deleteSetFromDatabase(set);
+                    },
+                    icon: Icon(Icons.delete, color: Color(int.tryParse(set.textColor) ?? 0xFF000000)),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+
+
 
   Future<void> _addNewSetToDatabase() async {
     final db = widget.database;
@@ -446,7 +509,7 @@ class _NoteSetScreenState extends State<NoteSetScreen> {
                   ),
                   child: const Text(
                     'Save',
-                    style: TextStyle(fontSize: 20), 
+                    style: TextStyle(fontSize: 20),
                   ),
                 ),
               ),
@@ -500,15 +563,42 @@ class EmptyClass extends StatefulWidget {
   final int setId;
   final Database database;
 
-
   EmptyClass({required this.setId, required this.database});
-
 
   @override
   _EmptyClassState createState() => _EmptyClassState();
 }
 
 class _EmptyClassState extends State<EmptyClass> {
+  late List<Fiszki> fiszki = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFlashcardsFromDatabase();
+  }
+
+  Future<void> _loadFlashcardsFromDatabase() async {
+    final List<Fiszki> loadedFlashcards = await _loadFlashcards();
+    setState(() {
+      fiszki = loadedFlashcards;
+    });
+  }
+
+  Future<List<Fiszki>> _loadFlashcards() async {
+    final db = widget.database;
+    final List<Map<String, dynamic>> flashcardMaps = await db.query(
+      'fiszki',
+      where: 'setId = ?',
+      whereArgs: [widget.setId],
+    );
+    List<Fiszki> loadedFlashcards = [];
+    for (var flashcardMap in flashcardMaps) {
+      loadedFlashcards.add(Fiszki.fromMap(flashcardMap));
+    }
+    return loadedFlashcards;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -530,6 +620,49 @@ class _EmptyClassState extends State<EmptyClass> {
           ),
         ),
       ),
+      body: Padding(
+        padding: const EdgeInsets.all(15),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AddQuestionScreen(
+                        setId: widget.setId,
+                        database: widget.database,
+                      ),
+                    ),
+                  ).then((_) {
+                    _loadFlashcardsFromDatabase(); // Odświeżenie listy fiszek po powrocie z ekranu dodawania fiszki
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.text,
+                  foregroundColor: AppColors.background,
+                ),
+                child: const Text('Add Flashcard'),
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: fiszki.length,
+                  itemBuilder: (context, index) {
+                    return FlashcardItem(
+                      question: fiszki[index].question,
+                      answer: fiszki[index].answer,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
@@ -537,10 +670,12 @@ class _EmptyClassState extends State<EmptyClass> {
             MaterialPageRoute(
               builder: (context) => AddQuestionScreen(
                 setId: widget.setId,
-                database: widget.database, // Przekazanie instancji bazy danych
+                database: widget.database,
               ),
             ),
-          );
+          ).then((_) {
+            _loadFlashcardsFromDatabase(); // Odświeżenie listy fiszek po powrocie z ekranu dodawania fiszki
+          });
         },
         backgroundColor: AppColors.text,
         child: const Icon(Icons.add, color: AppColors.background),
@@ -549,18 +684,63 @@ class _EmptyClassState extends State<EmptyClass> {
   }
 }
 
-//klasa odpowiedzialna za dodawanie pytan i odpowiedzi 
+class FlashcardItem extends StatefulWidget {
+  final String question;
+  final String answer;
+
+  FlashcardItem({required this.question, required this.answer});
+
+  @override
+  _FlashcardItemState createState() => _FlashcardItemState();
+}
+
+class _FlashcardItemState extends State<FlashcardItem> {
+  bool _showAnswer = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _showAnswer = !_showAnswer;
+        });
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.all(10),
+        width: 200,
+        height: 100,
+        decoration: BoxDecoration(
+          color: AppColors.text,
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Center(
+          child: Text(
+            _showAnswer ? widget.answer : widget.question,
+            style: TextStyle(
+              color: AppColors.background,
+              fontSize: 16,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+
+//klasa odpowiedzialna za dodawanie pytan i odpowiedzi
 class AddQuestionScreen extends StatefulWidget {
   final int setId;
   final Database database;
 
-
   AddQuestionScreen({required this.setId, required this.database});
-
 
   @override
   _AddQuestionScreenState createState() => _AddQuestionScreenState();
 }
+
 class _AddQuestionScreenState extends State<AddQuestionScreen> {
   final TextEditingController _questionController = TextEditingController();
   final TextEditingController _answerController = TextEditingController();
@@ -597,12 +777,8 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
     _questionController.clear();
     _answerController.clear();
 
-    // Pokaż SnackBar
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Center(child: Text('Added Q&A successfully'))),
-      );
-    }
+    // Powrót do poprzedniego ekranu po dodaniu fiszki
+    Navigator.pop(context);
   }
 
   @override
