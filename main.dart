@@ -3,6 +3,8 @@ import 'package:flutter/widgets.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:flutter_circle_color_picker/flutter_circle_color_picker.dart';
+import 'package:share_plus/share_plus.dart';
+import 'dart:convert';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -61,6 +63,16 @@ class Fiszki {
     };
   }
 
+  String toJson() {
+    final map = toMap();
+    return json.encode(map);
+  }
+
+  factory Fiszki.fromJson(String source) {
+    final map = json.decode(source);
+    return Fiszki.fromMap(map);
+  }
+
   @override
   String toString() {
     return 'Fiszki{id: $id, setId: $setId, name: $name, question: $question, answer: $answer}';
@@ -98,12 +110,46 @@ class Set {
     };
   }
 
+  String toJson() {
+    final map = toMap();
+    return json.encode(map);
+  }
+
+  factory Set.fromJson(String source) {
+    final map = json.decode(source);
+    return Set.fromMap(map);
+  }
+
   @override
   String toString() {
     return 'Set{id: $id, name: $name, color: $color, textColor: $textColor}';
   }
 }
-//klasa kolorów
+
+class SetWithFlashcards {
+  final Set set;
+  final List<Fiszki> fiszki;
+
+  SetWithFlashcards({required this.set, required this.fiszki});
+
+  String toJson() {
+    final map = {
+      'set': set.toMap(),
+      'fiszki': fiszki.map((fiszka) => fiszka.toMap()).toList(),
+    };
+    return json.encode(map);
+  }
+
+  factory SetWithFlashcards.fromJson(String source) {
+    final map = json.decode(source);
+    return SetWithFlashcards(
+      set: Set.fromMap(map['set']),
+      fiszki:
+          (map['fiszki'] as List).map((item) => Fiszki.fromMap(item)).toList(),
+    );
+  }
+}
+
 class AppColors {
   static const Color background = Color(0xFFFAF1E6);
   static const Color button = Color(0xFFE4EFE7);
@@ -113,8 +159,6 @@ class AppColors {
   static const Color czarny = Color(0x00000000);
 }
 
-
-//główna klasa z widokiem listy zestawów
 class MyApp extends StatefulWidget {
   final Database database;
 
@@ -142,19 +186,16 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _deleteSetFromDatabase(Set set) async {
     final db = widget.database;
-    // Usuń fiszki powiązane z zestawem
     await db.delete(
       'fiszki',
       where: 'setId = ?',
       whereArgs: [set.id],
     );
-    // Usuń zestaw
     await db.delete(
       'sets',
       where: 'id = ?',
       whereArgs: [set.id],
     );
-    // Odśwież listę zestawów
     _loadSetsFromDatabase();
   }
 
@@ -186,7 +227,7 @@ class _MyAppState extends State<MyApp> {
           cursorColor: AppColors.text,
           selectionColor: AppColors.inny,
           selectionHandleColor: AppColors.text,
-        )
+        ),
       ),
       home: Scaffold(
         appBar: PreferredSize(
@@ -207,40 +248,59 @@ class _MyAppState extends State<MyApp> {
             ),
           ),
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(15),
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                ElevatedButton(
-                  onPressed: () async {
-                    await _addNewSetToDatabase();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.text,
-                    foregroundColor: AppColors.background,
-                  ),
-                  child: const Text('Create set'),
-                ),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: sets.length,
-                    itemBuilder: (context, index) {
-                      return _buildSetWidget(context, sets[index]);
+        body: Builder(
+          builder: (context) => Padding(
+            padding: const EdgeInsets.all(15),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  ElevatedButton(
+                    onPressed: () async {
+                      await _addNewSetToDatabase();
                     },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.text,
+                      foregroundColor: AppColors.background,
+                    ),
+                    child: const Text('Create set'),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ImportScreen(
+                              database: widget.database,
+                              refreshSets: _loadSetsFromDatabase),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.text,
+                      foregroundColor: AppColors.background,
+                    ),
+                    child: const Text('Importuj zestaw'),
+                  ),
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: sets.length,
+                      itemBuilder: (context, index) {
+                        return _buildSetWidget(context, sets[index]);
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),  
+        ),
       ),
     );
   }
-
 
   Widget _buildSetWidget(BuildContext context, Set set) {
     return GestureDetector(
@@ -250,7 +310,7 @@ class _MyAppState extends State<MyApp> {
           MaterialPageRoute(
             builder: (context) => EmptyClass(
               setId: set.id,
-              database: widget.database, // Przekazanie instancji bazy danych
+              database: widget.database,
             ),
           ),
         );
@@ -266,7 +326,7 @@ class _MyAppState extends State<MyApp> {
               MaterialPageRoute(
                 builder: (context) => NoteSetScreen(
                   setId: set.id,
-                  database: widget.database, // Przekazanie instancji bazy danych
+                  database: widget.database,
                   refreshSets: _loadSetsFromDatabase,
                 ),
               ),
@@ -314,19 +374,36 @@ class _MyAppState extends State<MyApp> {
                         MaterialPageRoute(
                           builder: (context) => NoteSetScreen(
                             setId: set.id,
-                            database: widget.database, // Przekazanie instancji bazy danych
+                            database: widget.database,
                             refreshSets: _loadSetsFromDatabase,
                           ),
                         ),
                       );
                     },
-                    icon: Icon(Icons.edit, color: Color(int.tryParse(set.textColor) ?? 0xFF000000)),
+                    icon: Icon(Icons.edit,
+                        color:
+                            Color(int.tryParse(set.textColor) ?? 0xFF000000)),
+                  ),
+                  IconButton(
+                    onPressed: () async {
+                      final setWithFlashcards = SetWithFlashcards(
+                        set: set,
+                        fiszki: await _loadFlashcards(set.id),
+                      );
+                      final json = setWithFlashcards.toJson();
+                      Share.share(json, subject: 'Udostępnij zestaw fiszek');
+                    },
+                    icon: Icon(Icons.share,
+                        color:
+                            Color(int.tryParse(set.textColor) ?? 0xFF000000)),
                   ),
                   IconButton(
                     onPressed: () {
                       _deleteSetFromDatabase(set);
                     },
-                    icon: Icon(Icons.delete, color: Color(int.tryParse(set.textColor) ?? 0xFF000000)),
+                    icon: Icon(Icons.delete,
+                        color:
+                            Color(int.tryParse(set.textColor) ?? 0xFF000000)),
                   ),
                 ],
               ),
@@ -337,11 +414,10 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-
-
   Future<void> _addNewSetToDatabase() async {
     final db = widget.database;
-    final List<Map<String, dynamic>> setsCount = await db.rawQuery('SELECT COUNT(*) FROM sets');
+    final List<Map<String, dynamic>> setsCount =
+        await db.rawQuery('SELECT COUNT(*) FROM sets');
     final int id = setsCount[0]['COUNT(*)'] + 1;
     final newSet = Set(
       id: id,
@@ -356,17 +432,29 @@ class _MyAppState extends State<MyApp> {
     );
     await _loadSetsFromDatabase();
   }
+
+  Future<List<Fiszki>> _loadFlashcards(int setId) async {
+    final db = widget.database;
+    final List<Map<String, dynamic>> flashcardMaps = await db.query(
+      'fiszki',
+      where: 'setId = ?',
+      whereArgs: [setId],
+    );
+    List<Fiszki> loadedFlashcards = [];
+    for (var flashcardMap in flashcardMaps) {
+      loadedFlashcards.add(Fiszki.fromMap(flashcardMap));
+    }
+    return loadedFlashcards;
+  }
 }
 
-// klasa edycji zestawów - nazwa, kolory
 class NoteSetScreen extends StatefulWidget {
   final int setId;
   final Database database;
   final Function refreshSets;
 
-
-  NoteSetScreen({required this.setId, required this.database, required this.refreshSets});
-
+  NoteSetScreen(
+      {required this.setId, required this.database, required this.refreshSets});
 
   @override
   _NoteSetScreenState createState() => _NoteSetScreenState();
@@ -374,18 +462,18 @@ class NoteSetScreen extends StatefulWidget {
 
 class _NoteSetScreenState extends State<NoteSetScreen> {
   late TextEditingController _nameController;
-  late Color _selectedColor; // Domyślny kolor
+  late Color _selectedColor;
   late Color _selectedTextColor;
 
   @override
   void initState() {
     super.initState();
-    _selectedColor = AppColors.text; // Ustaw domyślny kolor podczas inicjalizacji stanu
+    _selectedColor = AppColors.text;
     _selectedTextColor = AppColors.background;
-    _nameController = TextEditingController(); // Inicjalizacja kontrolera dla pola tekstowego
+    _nameController = TextEditingController();
     _loadSetDetails();
-
   }
+
   Future<void> _loadSetDetails() async {
     final db = widget.database;
     final List<Map<String, dynamic>> setMaps = await db.query(
@@ -432,10 +520,11 @@ class _NoteSetScreenState extends State<NoteSetScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextField(
-                controller: _nameController, // Przypisanie kontrolera do pola tekstowego
+                controller: _nameController,
                 decoration: const InputDecoration(
                   labelText: 'Change name',
-                  labelStyle: TextStyle(color: AppColors.text, fontWeight: FontWeight.bold),
+                  labelStyle: TextStyle(
+                      color: AppColors.text, fontWeight: FontWeight.bold),
                   focusedBorder: UnderlineInputBorder(
                     borderSide: BorderSide(color: AppColors.text),
                   ),
@@ -480,7 +569,7 @@ class _NoteSetScreenState extends State<NoteSetScreen> {
                 child: Text(
                   'Choose text color',
                   style: TextStyle(
-                    fontSize:19,
+                    fontSize: 19,
                     color: AppColors.text,
                     fontWeight: FontWeight.bold,
                   ),
@@ -505,12 +594,12 @@ class _NoteSetScreenState extends State<NoteSetScreen> {
               Center(
                 child: ElevatedButton(
                   onPressed: () {
-                    _saveChanges(context); // Wywołanie metody do zapisu zmian
+                    _saveChanges(context);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.text,
                     foregroundColor: AppColors.background,
-                    minimumSize: const Size(150, 50), // Tutaj określamy minimalny rozmiar przycisku
+                    minimumSize: const Size(150, 50),
                   ),
                   child: const Text(
                     'Save',
@@ -528,42 +617,31 @@ class _NoteSetScreenState extends State<NoteSetScreen> {
   void _saveChanges(BuildContext context) async {
     final db = widget.database;
     final int setId = widget.setId;
-
-    // Pobranie wartości z pola tekstowego
     final String newName = _nameController.text;
-
-    // Konwersja kolorów na wartości tekstowe
     final String newColor = _selectedColor.value.toRadixString(16);
     final String newTextColor = _selectedTextColor.value.toRadixString(16);
 
-    // Aktualizacja danych w bazie danych
     await db.update(
       'sets',
       {
         'name': newName,
-        'color': '0x$newColor', // Formatowanie koloru do postaci '0xRRGGBB'
-        'textColor': '0x$newTextColor', // Formatowanie koloru do postaci '0xRRGGBB'
+        'color': '0x$newColor',
+        'textColor': '0x$newTextColor',
       },
       where: 'id = ?',
       whereArgs: [setId],
     );
-    // Ponowne załadowanie zestawów z bazy danych po zapisaniu zmian
     widget.refreshSets();
-
-    // Powrót do poprzedniego widoku
     Navigator.pop(context);
   }
 
-
   @override
   void dispose() {
-    // Usunięcie kontrolera po zakończeniu
     _nameController.dispose();
     super.dispose();
   }
 }
 
-// klasa widoku konkretnego zestawu
 class EmptyClass extends StatefulWidget {
   final int setId;
   final Database database;
@@ -665,7 +743,7 @@ class _EmptyClassState extends State<EmptyClass> {
                       ),
                     ),
                   ).then((_) {
-                    _loadFlashcardsFromDatabase(); // Odświeżenie listy fiszek po powrocie z ekranu dodawania fiszki
+                    _loadFlashcardsFromDatabase();
                   });
                 },
                 style: ElevatedButton.styleFrom(
@@ -681,8 +759,10 @@ class _EmptyClassState extends State<EmptyClass> {
                   itemCount: fiszki.length,
                   itemBuilder: (context, index) {
                     final set = _getSetById(widget.setId);
-                    final setColor = set != null ? int.parse(set.color) : 0xFF000000;
-                    final setTextColor = set != null ? int.parse(set.textColor) : 0xFFFFFFFF;
+                    final setColor =
+                        set != null ? int.parse(set.color) : 0xFF000000;
+                    final setTextColor =
+                        set != null ? int.parse(set.textColor) : 0xFFFFFFFF;
                     return FlashcardItem(
                       question: fiszki[index].question,
                       answer: fiszki[index].answer,
@@ -699,7 +779,6 @@ class _EmptyClassState extends State<EmptyClass> {
     );
   }
 }
-
 
 class FlashcardItem extends StatefulWidget {
   final String question;
@@ -737,8 +816,8 @@ class _FlashcardItemState extends State<FlashcardItem> {
           borderRadius: BorderRadius.circular(15),
         ),
         constraints: const BoxConstraints(
-          minHeight: 100, // Ustaw minimalną wysokość
-          minWidth: 200,  // Ustaw minimalną szerokość
+          minHeight: 100,
+          minWidth: 200,
         ),
         child: IntrinsicHeight(
           child: Column(
@@ -763,8 +842,6 @@ class _FlashcardItemState extends State<FlashcardItem> {
   }
 }
 
-
-//klasa odpowiedzialna za dodawanie pytan i odpowiedzi
 class AddQuestionScreen extends StatefulWidget {
   final int setId;
   final Database database;
@@ -808,7 +885,6 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
       loadedFlashcards.add(Fiszki.fromMap(flashcardMap));
     }
 
-    // Pobierz kolor tekstu i kolor kontenera z tabeli sets
     final List<Map<String, dynamic>> setMaps = await db.query(
       'sets',
       where: 'id = ?',
@@ -846,19 +922,22 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              // Dodawanie nowego pytania i odpowiedzi
               TextField(
                 controller: _questionController,
                 decoration: InputDecoration(
                   labelText: 'Enter question',
-                  labelStyle: const TextStyle(color: AppColors.text, fontWeight: FontWeight.bold),
+                  labelStyle: const TextStyle(
+                      color: AppColors.text, fontWeight: FontWeight.bold),
                   focusedBorder: const UnderlineInputBorder(
                     borderSide: BorderSide(color: AppColors.text),
                   ),
                   enabledBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.text), // Kolor paska gdy nie jest aktywne
+                    borderSide: BorderSide(color: AppColors.text),
                   ),
-                  errorText: _errorMessage != null && _questionController.text.trim().isEmpty ? _errorMessage : null,
+                  errorText: _errorMessage != null &&
+                          _questionController.text.trim().isEmpty
+                      ? _errorMessage
+                      : null,
                 ),
                 style: const TextStyle(color: AppColors.text),
                 cursorColor: AppColors.text,
@@ -868,14 +947,18 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                 controller: _answerController,
                 decoration: InputDecoration(
                   labelText: 'Enter answer',
-                  labelStyle: const TextStyle(color: AppColors.text, fontWeight: FontWeight.bold),
+                  labelStyle: const TextStyle(
+                      color: AppColors.text, fontWeight: FontWeight.bold),
                   focusedBorder: const UnderlineInputBorder(
                     borderSide: BorderSide(color: AppColors.text),
                   ),
                   enabledBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.text), // Kolor paska gdy nie jest aktywne
+                    borderSide: BorderSide(color: AppColors.text),
                   ),
-                  errorText: _errorMessage != null && _answerController.text.trim().isEmpty ? _errorMessage : null,
+                  errorText: _errorMessage != null &&
+                          _answerController.text.trim().isEmpty
+                      ? _errorMessage
+                      : null,
                 ),
                 style: const TextStyle(color: AppColors.text),
                 cursorColor: AppColors.text,
@@ -890,7 +973,6 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                 child: const Text('Add Flashcard'),
               ),
               const SizedBox(height: 5),
-              // Lista z wyświetlanymi pytaniami i odpowiedziami
               Expanded(
                 child: ListView.builder(
                   itemCount: flashcards.length,
@@ -951,11 +1033,13 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
                               IconButton(
-                                onPressed: () => _editFlashcard(context, flashcards[index]),
+                                onPressed: () =>
+                                    _editFlashcard(context, flashcards[index]),
                                 icon: Icon(Icons.edit, color: textColor),
                               ),
                               IconButton(
-                                onPressed: () => _deleteFlashcard(context, flashcards[index]),
+                                onPressed: () => _deleteFlashcard(
+                                    context, flashcards[index]),
                                 icon: Icon(Icons.delete, color: textColor),
                               ),
                             ],
@@ -972,27 +1056,25 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
       ),
     );
   }
+
   Future<void> _deleteFlashcard(BuildContext context, Fiszki flashcard) async {
     final db = widget.database;
-    
-    // Usunięcie fiszki z bazy danych
     await db.delete(
       'fiszki',
       where: 'id = ?',
       whereArgs: [flashcard.id],
     );
-
-    // Odśwież listę fiszek
     _loadFlashcardsFromDatabase();
   }
-
 
   void _editFlashcard(BuildContext context, Fiszki flashcard) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        final questionController =
+            TextEditingController(text: flashcard.question);
+        final answerController = TextEditingController(text: flashcard.answer);
         return AlertDialog(
-          
           backgroundColor: AppColors.background,
           title: const Text(
             'Edit Flashcard',
@@ -1002,7 +1084,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
-                controller: TextEditingController(text: flashcard.question),
+                controller: questionController,
                 cursorColor: AppColors.text,
                 cursorErrorColor: AppColors.text,
                 decoration: const InputDecoration(
@@ -1012,15 +1094,13 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                     borderSide: BorderSide(color: AppColors.text),
                   ),
                   enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.text), // Kolor paska w stanie domyślnym
+                    borderSide: BorderSide(color: AppColors.text),
                   ),
                   labelStyle: TextStyle(color: AppColors.text),
                 ),
-                
-                
               ),
               TextField(
-                controller: TextEditingController(text: flashcard.answer),
+                controller: answerController,
                 cursorColor: AppColors.text,
                 cursorErrorColor: AppColors.text,
                 decoration: const InputDecoration(
@@ -1030,7 +1110,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                     borderSide: BorderSide(color: AppColors.text),
                   ),
                   enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.text), // Kolor paska w stanie domyślnym
+                    borderSide: BorderSide(color: AppColors.text),
                   ),
                   labelStyle: TextStyle(color: AppColors.text),
                 ),
@@ -1049,8 +1129,23 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
               child: Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
-                _updateFlashcard(context, flashcard.id);
+              onPressed: () async {
+                final newQuestion = questionController.text.trim();
+                final newAnswer = answerController.text.trim();
+                final db = widget.database;
+
+                await db.update(
+                  'fiszki',
+                  {
+                    'question': newQuestion,
+                    'answer': newAnswer,
+                  },
+                  where: 'id = ?',
+                  whereArgs: [flashcard.id],
+                );
+
+                Navigator.pop(context);
+                _loadFlashcardsFromDatabase();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.text,
@@ -1064,34 +1159,11 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
     );
   }
 
-  Future<void> _updateFlashcard(BuildContext context, int flashcardId) async {
-    final String newQuestion = _questionController.text.trim();
-    final String newAnswer = _answerController.text.trim();
-    final db = widget.database;
-
-    await db.update(
-      'fiszki',
-      {
-        'question': newQuestion,
-        'answer': newAnswer,
-      },
-      where: 'id = ?',
-      whereArgs: [flashcardId],
-    );
-
-    Navigator.pop(context);
-
-    _loadFlashcardsFromDatabase();
-  }
-
-
-  // Metoda do dodawania nowej fiszki
   Future<void> _addFlashcard(BuildContext context) async {
     final db = widget.database;
     final String question = _questionController.text.trim();
     final String answer = _answerController.text.trim();
 
-    // Sprawdź, czy pytanie i odpowiedź nie są puste
     if (question.isEmpty || answer.isEmpty) {
       setState(() {
         _errorMessage = 'Question and answer cannot be empty';
@@ -1099,7 +1171,6 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
       return;
     }
 
-    // Pobierz nazwę zestawu z bazy danych
     final List<Map<String, dynamic>> setMaps = await db.query(
       'sets',
       where: 'id = ?',
@@ -1107,11 +1178,10 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
     );
     final String setName = setMaps.first['name'];
 
-    // Policzenie obecnych fiszek w tabeli
-    final List<Map<String, dynamic>> flashcardCount = await db.rawQuery('SELECT COUNT(*) FROM fiszki');
+    final List<Map<String, dynamic>> flashcardCount =
+        await db.rawQuery('SELECT COUNT(*) FROM fiszki');
     final int newId = (Sqflite.firstIntValue(flashcardCount) ?? 0) + 1;
 
-    // Dodanie nowej fiszki do bazy danych
     await db.insert(
       'fiszki',
       {
@@ -1124,14 +1194,108 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
 
-    // Wyczyść pola tekstowe i komunikat błędu
     _questionController.clear();
     _answerController.clear();
     setState(() {
       _errorMessage = null;
     });
 
-    // Odśwież listę fiszek
     _loadFlashcardsFromDatabase();
+  }
+}
+
+class ImportScreen extends StatefulWidget {
+  final Database database;
+  final Function refreshSets;
+
+  ImportScreen({required this.database, required this.refreshSets});
+
+  @override
+  _ImportScreenState createState() => _ImportScreenState();
+}
+
+class _ImportScreenState extends State<ImportScreen> {
+  final TextEditingController _jsonController = TextEditingController();
+  String? _errorMessage;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        flexibleSpace: Container(
+          child: SizedBox(
+            width: 150,
+            height: 80,
+            child: Image.asset(
+              'assets/logo.png',
+              fit: BoxFit.contain,
+              color: AppColors.text,
+            ),
+          ),
+        ),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(
+              controller: _jsonController,
+              maxLines: null,
+              decoration: InputDecoration(
+                labelText: 'Wklej JSON zestawu',
+                errorText: _errorMessage,
+                labelStyle: TextStyle(color: AppColors.text),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: AppColors.text),
+                ),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: AppColors.text),
+                ),
+              ),
+              style: TextStyle(color: AppColors.text),
+              cursorColor: AppColors.text,
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                final jsonString = _jsonController.text;
+                try {
+                  final setWithFlashcards =
+                      SetWithFlashcards.fromJson(jsonString);
+                  await _importSetWithFlashcards(setWithFlashcards);
+                  setState(() {
+                    _errorMessage = null;
+                  });
+                  widget.refreshSets();
+                  Navigator.pop(context);
+                } catch (e) {
+                  setState(() {
+                    _errorMessage = 'Błąd podczas importu zestawu: $e';
+                  });
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.text,
+                foregroundColor: AppColors.background,
+              ),
+              child: Text('Importuj zestaw'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _importSetWithFlashcards(
+      SetWithFlashcards setWithFlashcards) async {
+    final db = widget.database;
+    await db.insert('sets', setWithFlashcards.set.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace);
+    for (var fiszka in setWithFlashcards.fiszki) {
+      await db.insert('fiszki', fiszka.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace);
+    }
   }
 }
