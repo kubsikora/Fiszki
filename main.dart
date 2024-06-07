@@ -145,7 +145,7 @@ class SetWithFlashcards {
     return SetWithFlashcards(
       set: Set.fromMap(map['set']),
       fiszki:
-          (map['fiszki'] as List).map((item) => Fiszki.fromMap(item)).toList(),
+      (map['fiszki'] as List).map((item) => Fiszki.fromMap(item)).toList(),
     );
   }
 }
@@ -158,6 +158,30 @@ class AppColors {
   static const Color bialy = Color(0xFFFFFFFF);
   static const Color czarny = Color(0x00000000);
 }
+class LightColors {
+  static const Color background = Color(0xFFFAF1E6);
+  static const Color button = Color(0xFFE4EFE7);
+  static const Color text = Color(0xFF064420);
+  static const Color inny = Color(0xFFFDFAF6);
+  static const Color bialy = Color(0xFFFFFFFF);
+  static const Color czarny = Color(0x00000000);
+}
+class DarkColors {
+  static Color background = Color(0xFF040D12);
+  static Color button = Color(0xFF183D3D);
+  static Color text = Color(0xFFFFFFFF);
+  static Color inny = Color(0xFF5C8374);
+  static Color bialy = Color(0xFFFFFFFF);
+  static Color czarny = Color(0xFF000000);
+}
+
+Map<String, String> darkColors = {
+  'background_color': '#040D12',
+  'window_color': '#183D3D',
+  'bonus_color': '#5C8374',
+  'focus_color': '#93B1A6',
+  'font_color': '#FFFFFF',
+};
 
 class MyApp extends StatefulWidget {
   final Database database;
@@ -255,33 +279,39 @@ class _MyAppState extends State<MyApp> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  ElevatedButton(
-                    onPressed: () async {
-                      await _addNewSetToDatabase();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.text,
-                      foregroundColor: AppColors.background,
-                    ),
-                    child: const Text('Create set'),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ImportScreen(
-                              database: widget.database,
-                              refreshSets: _loadSetsFromDatabase),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () async {
+                          await _addNewSetToDatabase();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.text,
+                          foregroundColor: AppColors.background,
                         ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.text,
-                      foregroundColor: AppColors.background,
-                    ),
-                    child: const Text('Importuj zestaw'),
+                        child: const Text('Create set'),
+                      ),
+                      const SizedBox(width: 10),
+                      ElevatedButton(
+                        onPressed: () async {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ImportScreen(
+                                database: widget.database,
+                                refreshSets: _loadSetsFromDatabase,
+                              ),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.text,
+                          foregroundColor: AppColors.background,
+                        ),
+                        child: const Text('Settings'),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 20),
                   Expanded(
@@ -382,7 +412,7 @@ class _MyAppState extends State<MyApp> {
                     },
                     icon: Icon(Icons.edit,
                         color:
-                            Color(int.tryParse(set.textColor) ?? 0xFF000000)),
+                        Color(int.tryParse(set.textColor) ?? 0xFF000000)),
                   ),
                   IconButton(
                     onPressed: () async {
@@ -395,7 +425,7 @@ class _MyAppState extends State<MyApp> {
                     },
                     icon: Icon(Icons.share,
                         color:
-                            Color(int.tryParse(set.textColor) ?? 0xFF000000)),
+                        Color(int.tryParse(set.textColor) ?? 0xFF000000)),
                   ),
                   IconButton(
                     onPressed: () {
@@ -403,7 +433,7 @@ class _MyAppState extends State<MyApp> {
                     },
                     icon: Icon(Icons.delete,
                         color:
-                            Color(int.tryParse(set.textColor) ?? 0xFF000000)),
+                        Color(int.tryParse(set.textColor) ?? 0xFF000000)),
                   ),
                 ],
               ),
@@ -417,7 +447,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> _addNewSetToDatabase() async {
     final db = widget.database;
     final List<Map<String, dynamic>> setsCount =
-        await db.rawQuery('SELECT COUNT(*) FROM sets');
+    await db.rawQuery('SELECT COUNT(*) FROM sets');
     final int id = setsCount[0]['COUNT(*)'] + 1;
     final newSet = Set(
       id: id,
@@ -760,9 +790,9 @@ class _EmptyClassState extends State<EmptyClass> {
                   itemBuilder: (context, index) {
                     final set = _getSetById(widget.setId);
                     final setColor =
-                        set != null ? int.parse(set.color) : 0xFF000000;
+                    set != null ? int.parse(set.color) : 0xFF000000;
                     final setTextColor =
-                        set != null ? int.parse(set.textColor) : 0xFFFFFFFF;
+                    set != null ? int.parse(set.textColor) : 0xFFFFFFFF;
                     return FlashcardItem(
                       question: fiszki[index].question,
                       answer: fiszki[index].answer,
@@ -935,7 +965,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                     borderSide: BorderSide(color: AppColors.text),
                   ),
                   errorText: _errorMessage != null &&
-                          _questionController.text.trim().isEmpty
+                      _questionController.text.trim().isEmpty
                       ? _errorMessage
                       : null,
                 ),
@@ -956,7 +986,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                     borderSide: BorderSide(color: AppColors.text),
                   ),
                   errorText: _errorMessage != null &&
-                          _answerController.text.trim().isEmpty
+                      _answerController.text.trim().isEmpty
                       ? _errorMessage
                       : null,
                 ),
@@ -1072,7 +1102,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
       context: context,
       builder: (BuildContext context) {
         final questionController =
-            TextEditingController(text: flashcard.question);
+        TextEditingController(text: flashcard.question);
         final answerController = TextEditingController(text: flashcard.answer);
         return AlertDialog(
           backgroundColor: AppColors.background,
@@ -1179,7 +1209,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
     final String setName = setMaps.first['name'];
 
     final List<Map<String, dynamic>> flashcardCount =
-        await db.rawQuery('SELECT COUNT(*) FROM fiszki');
+    await db.rawQuery('SELECT COUNT(*) FROM fiszki');
     final int newId = (Sqflite.firstIntValue(flashcardCount) ?? 0) + 1;
 
     await db.insert(
@@ -1203,7 +1233,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
     _loadFlashcardsFromDatabase();
   }
 }
-
+//Okno  ustawien
 class ImportScreen extends StatefulWidget {
   final Database database;
   final Function refreshSets;
@@ -1215,8 +1245,30 @@ class ImportScreen extends StatefulWidget {
 }
 
 class _ImportScreenState extends State<ImportScreen> {
+  bool _isDarkModeEnabled = false;
   final TextEditingController _jsonController = TextEditingController();
   String? _errorMessage;
+
+  void _toggleTheme(bool newValue) {
+    setState(() {
+      //_isDarkModeEnabled = newValue;
+      //if (_isDarkModeEnabled) {
+        //AppColors.background = DarkColors.background;
+        //AppColors.button = DarkColors.button;
+        //AppColors.text = DarkColors.text;
+        //AppColors.inny = DarkColors.inny;
+        //AppColors.bialy = DarkColors.bialy;
+        //AppColors.czarny = DarkColors.czarny;
+      //} else {
+        //AppColors.background = LightColors.background;
+        //AppColors.button = LightColors.button;
+        //AppColors.text = LightColors.text;
+        //AppColors.inny = LightColors.inny;
+        //AppColors.bialy = LightColors.bialy;
+        //AppColors.czarny = LightColors.czarny;
+      //}
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1240,11 +1292,27 @@ class _ImportScreenState extends State<ImportScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            const SizedBox(height: 30),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start, // Aligns to the left
+              children: <Widget>[
+                Text(
+                  'Upload Flashcard sets',
+                  style: TextStyle(color: AppColors.text),
+                ),
+                SizedBox(height: 8.0), // Adds some space between text and line
+                Divider( // Creates a separating line
+                  color: Colors.grey, // You can customize the line color
+                  thickness: 1.0, // Line thickness
+                ),
+              ],
+            ),
+            const SizedBox(height: 40),
             TextField(
               controller: _jsonController,
               maxLines: null,
               decoration: InputDecoration(
-                labelText: 'Wklej JSON zestawu',
+                labelText: 'Paste JSON',
                 errorText: _errorMessage,
                 labelStyle: TextStyle(color: AppColors.text),
                 focusedBorder: UnderlineInputBorder(
@@ -1262,8 +1330,7 @@ class _ImportScreenState extends State<ImportScreen> {
               onPressed: () async {
                 final jsonString = _jsonController.text;
                 try {
-                  final setWithFlashcards =
-                      SetWithFlashcards.fromJson(jsonString);
+                  final setWithFlashcards = SetWithFlashcards.fromJson(jsonString);
                   await _importSetWithFlashcards(setWithFlashcards);
                   setState(() {
                     _errorMessage = null;
@@ -1272,7 +1339,7 @@ class _ImportScreenState extends State<ImportScreen> {
                   Navigator.pop(context);
                 } catch (e) {
                   setState(() {
-                    _errorMessage = 'Błąd podczas importu zestawu: $e';
+                    _errorMessage = 'Error: $e';
                   });
                 }
               },
@@ -1280,8 +1347,27 @@ class _ImportScreenState extends State<ImportScreen> {
                 backgroundColor: AppColors.text,
                 foregroundColor: AppColors.background,
               ),
-              child: Text('Importuj zestaw'),
+              child: Text('Import set'),
             ),
+            const SizedBox(height: 40),
+            Column(
+              //crossAxisAlignment: CrossAxisAlignment.start, // Aligns to the left
+              //children: <Widget>[
+                //Text(
+                  //'Night Mode',
+                  //style: TextStyle(color: AppColors.text),
+                //),
+                //SizedBox(height: 8.0), // Adds some space between text and line
+                //Divider( // Creates a separating line
+                  //color: Colors.grey, // You can customize the line color
+                  //thickness: 1.0, // Line thickness
+                //),
+              //],
+            ),
+            //Switch(
+              //value: _isDarkModeEnabled,
+              //onChanged: _toggleTheme,
+            //),
           ],
         ),
       ),
